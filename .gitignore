@@ -1,0 +1,8 @@
+.DS_Store
+*.mp3
+*.mp4
+*.pdf
+storage_state.json
+browser_profile/
+__pycache__/
+*.pyc

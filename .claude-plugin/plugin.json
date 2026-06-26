@@ -1,0 +1,10 @@
+{
+  "name": "notebooklm-galaxia",
+  "description": "Acces programmatique complet a Google NotebookLM depuis Claude Code et Hermes : creer des notebooks, ajouter des sources (URL, YouTube, PDF, audio, video), interroger un corpus, et generer tous les artefacts (podcast audio, video, slides, quiz, infographie, mind map, rapport). Positionne NotebookLM comme generateur de media et d'analyse gros corpus, en complement du brain gbrain (qui reste la memoire de retrieval).",
+  "version": "0.1.0",
+  "author": {
+    "name": "Alexandre Mallet",
+    "email": "alexandre.mallet@buldee.com"
+  },
+  "license": "Proprietary"
+}
