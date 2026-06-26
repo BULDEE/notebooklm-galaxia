@@ -1,0 +1,25 @@
+{
+  "name": "notebooklm-galaxia",
+  "version": "0.1.0",
+  "owner": {
+    "name": "Alexandre Mallet",
+    "email": "contact@buldee.com"
+  },
+  "metadata": {
+    "description": "NotebookLM access for Claude Code, positioned in the Galaxia stack: media and large-corpus analysis, with gbrain as the retrieval memory."
+  },
+  "plugins": [
+    {
+      "name": "notebooklm-galaxia",
+      "version": "0.1.0",
+      "description": "Full programmatic access to Google NotebookLM: create notebooks, add sources, query a corpus, and generate every artifact (podcast, video, slides, quiz, infographic, mind map, report). Includes a gbrain-first session wrapup.",
+      "author": {
+        "name": "Alexandre Mallet",
+        "email": "alexandre.mallet@buldee.com"
+      },
+      "source": "./",
+      "category": "productivity",
+      "tags": ["notebooklm", "rag", "media", "podcast", "research", "gbrain"]
+    }
+  ]
+}
