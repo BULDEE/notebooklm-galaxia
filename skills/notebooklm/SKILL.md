@@ -1,62 +1,62 @@
 ---
 name: notebooklm
-description: Acces programmatique complet a Google NotebookLM via la CLI notebooklm-py. Creer des notebooks, ajouter des sources (URL, YouTube, PDF, audio, video, image), interroger un corpus, generer tous les artefacts (podcast, video, slides, quiz, flashcards, infographie, mind map, rapport) et les telecharger. Se declenche sur /notebooklm ou une intention type "fais un podcast sur X", "analyse ces documents", "installe notebooklm".
+description: Full programmatic access to Google NotebookLM via the notebooklm-py CLI. Create notebooks, add sources (URL, YouTube, PDF, audio, video, image), query a corpus, generate every artifact (podcast, video, slides, quiz, flashcards, infographic, mind map, report) and download them. Triggers on /notebooklm or intent like "make a podcast about X", "analyze these documents", "install notebooklm".
 ---
-<!-- notebooklm-galaxia v0.1.0 - base: notebooklm-py (CLI communautaire, automation navigateur) -->
+<!-- notebooklm-galaxia v0.1.0 - base: notebooklm-py (community CLI, browser automation) -->
 
 # NotebookLM (Galaxia)
 
-Acces programmatique complet a Google NotebookLM, y compris des capacites non exposees dans l'UI web.
+Full programmatic access to Google NotebookLM, including capabilities not exposed in the web UI.
 
-## Positionnement dans la stack Galaxia (a lire avant usage)
+## Positioning in the Galaxia stack (read first)
 
-NotebookLM n'est PAS la memoire de l'agent. Le brain de retrieval, c'est **gbrain + Postgres+pgvector** (MCP-native, write-back agent, prive). NotebookLM n'a pas d'API de query officielle : cette CLI passe par de l'automation navigateur (cookies), fragile et soumise aux conditions de Google. On l'utilise donc pour ce qu'elle fait de mieux, et pas dans le hot path d'un agent autonome.
+NotebookLM is NOT the agent's memory. The retrieval brain is **gbrain + Postgres+pgvector** (MCP-native, agent write-back, private). NotebookLM has no official query API: this CLI drives browser automation (cookies), which is fragile and against Google's automated-access terms. So use it for what it is genuinely good at, and never in an autonomous agent's hot path.
 
-**Utiliser NotebookLM pour :**
-- Generer du **media** : podcast audio, video explainer, slides, infographie, mind map, quiz, flashcards.
-- **Analyser un gros corpus externe** ponctuel (dizaines de PDF/YouTube/URL) avec reponses citees, sans construire d'ingestion.
+**Use NotebookLM for:**
+- Generating **media**: audio podcast, video explainer, slides, infographic, mind map, quiz, flashcards.
+- One-off **analysis of a large external corpus** (dozens of PDFs/YouTube/URLs) with grounded citations, without building an ingestion pipeline.
 
-**Ne PAS utiliser NotebookLM pour :**
-- La memoire long-terme de l'agent (c'est gbrain : `gbrain put` / outils MCP put_page).
-- Le retrieval dans une boucle agent autonome (fragile, ~50 requetes/jour, casse au moindre changement d'UI Google).
+**Do NOT use NotebookLM for:**
+- The agent's long-term memory (that is gbrain: `gbrain put` / the put_page MCP tool).
+- Retrieval inside an autonomous agent loop (fragile, ~50 requests/day, breaks on any Google UI change).
 
-## Step 0 : Setup (au premier usage)
+## Step 0: Setup (on first use)
 
-Si `notebooklm` n'est pas installe ou authentifie, faire le setup d'abord.
+If `notebooklm` is not installed or authenticated, do the setup first.
 
-### Pre-requis : Python 3.10+
+### Prerequisite: Python 3.10+
 
 ```bash
 python3 --version
 ```
 
-Si Python < 3.10 (le defaut macOS 3.9.x), installer une version compatible :
+If Python < 3.10 (the macOS default 3.9.x), install a compatible version:
 
-macOS (Homebrew) :
+macOS (Homebrew):
 ```bash
 brew install python@3.12
 ```
-Puis utiliser `/opt/homebrew/bin/python3.12` (Apple Silicon) ou `/usr/local/bin/python3.12` (Intel).
+Then use `/opt/homebrew/bin/python3.12` (Apple Silicon) or `/usr/local/bin/python3.12` (Intel).
 
-Linux (apt) :
+Linux (apt):
 ```bash
 sudo apt update && sudo apt install -y python3.12 python3.12-venv
 ```
 
-### Installer la CLI
+### Install the CLI
 
-Toujours via un venv (evite "externally-managed-environment" et les soucis de PATH) :
+Always use a venv (avoids "externally-managed-environment" and PATH issues):
 
 ```bash
 PYTHON=$(command -v python3.12 2>/dev/null || command -v python3.11 2>/dev/null || command -v python3.10 2>/dev/null || command -v python3)
-$PYTHON -c "import sys; assert sys.version_info >= (3,10), f'Python {sys.version} trop vieux, besoin 3.10+'; print(f'Python {sys.version}')"
+$PYTHON -c "import sys; assert sys.version_info >= (3,10), f'Python {sys.version} too old, need 3.10+'; print(f'Python {sys.version}')"
 $PYTHON -m venv ~/.notebooklm-venv
 source ~/.notebooklm-venv/bin/activate
 pip install "notebooklm-py[browser]"
 playwright install chromium
 ```
 
-Symlink sur le PATH :
+Symlink on PATH:
 ```bash
 mkdir -p ~/bin
 ln -sf ~/.notebooklm-venv/bin/notebooklm ~/bin/notebooklm
@@ -64,15 +64,15 @@ export PATH="$HOME/bin:$PATH"
 notebooklm --help
 ```
 
-### Authentifier
+### Authenticate
 
-IMPORTANT : `notebooklm login` exige une entree terminal interactive (Entree apres connexion), que le bash tool de Claude Code ne supporte pas. Utiliser ce script de login a la place.
+IMPORTANT: `notebooklm login` needs interactive terminal input (pressing Enter after sign-in), which Claude Code's bash tool does not support. Use this login script instead.
 
-Dire a l'utilisateur :
+Tell the user:
 
-> Je vais ouvrir une fenetre navigateur : connecte-toi a ton compte Google et va sur notebooklm.google.com. Prends ton temps, j'attends ta confirmation avant de fermer.
+> I am going to open a browser window: sign into your Google account and go to notebooklm.google.com. Take your time, I will wait for your confirmation before closing it.
 
-Puis :
+Then:
 
 ```bash
 cat > /tmp/nlm_login.py << 'PYEOF'
@@ -95,25 +95,25 @@ with sync_playwright() as p:
     )
     page = browser.pages[0] if browser.pages else browser.new_page()
     page.goto("https://notebooklm.google.com/")
-    print("Navigateur ouvert. En attente du signal de sauvegarde...")
+    print("Browser open. Waiting for the save signal...")
     while not SIGNAL_FILE.exists():
         time.sleep(1)
     storage = browser.storage_state()
     with open(STORAGE_PATH, "w") as f:
         json.dump(storage, f)
-    print(f"Sauve {len(storage.get('cookies', []))} cookies")
+    print(f"Saved {len(storage.get('cookies', []))} cookies")
     browser.close()
 
 SIGNAL_FILE.unlink(missing_ok=True)
-print(f"Auth sauvee : {STORAGE_PATH}")
+print(f"Auth saved: {STORAGE_PATH}")
 PYEOF
 
 source ~/.notebooklm-venv/bin/activate
 python3 /tmp/nlm_login.py > /tmp/nlm_login_output.txt 2>&1 &
-echo "Login lance (PID=$!). Navigateur dans quelques secondes..."
+echo "Login started (PID=$!). Browser opens in a few seconds..."
 ```
 
-Attendre ~10s, demander a l'utilisateur s'il voit le navigateur et s'il est connecte. Une fois sur la home NotebookLM :
+Wait ~10s, ask the user if they see the browser and are signed in. Once on the NotebookLM home:
 
 ```bash
 touch /tmp/nlm_save_signal
@@ -121,112 +121,112 @@ sleep 8
 cat /tmp/nlm_login_output.txt
 ```
 
-Verifier :
+Verify:
 ```bash
 export PATH="$HOME/bin:$PATH"
 notebooklm auth check
 notebooklm list
 ```
 
-Si OK (cookie SID present), confirmer et nettoyer :
+If OK (SID cookie present), confirm and clean up:
 ```bash
 rm -f /tmp/nlm_login.py /tmp/nlm_login_output.txt /tmp/nlm_save_signal
 ```
 
-Si echec (SID manquant), reset profil et reessayer :
+If it fails (SID missing), reset the profile and retry:
 ```bash
 rm -rf ~/.notebooklm/browser_profile ~/.notebooklm/storage_state.json
 ```
 
-## Usage depuis Hermes (Galaxia, optionnel)
+## Use from Hermes (Galaxia, optional)
 
-NotebookLM n'est PAS branche en MCP sur Hermes (pas d'API query officielle, automation navigateur trop fragile pour un agent 24/7). Pour declencher une generation NotebookLM depuis le stack autonome, passer par **N8N** (workflow deterministe : reception d'une demande, lancement de la CLI sur une machine avec session, livraison du media). Garder NotebookLM hors du hot path de l'agent.
+NotebookLM is NOT wired as an MCP server in Hermes (no official query API, browser automation too fragile for a 24/7 agent). To trigger a NotebookLM generation from the autonomous stack, go through **N8N** (deterministic workflow: receive a request, run the CLI on a machine with a session, deliver the media). Keep NotebookLM out of the agent's hot path.
 
-## Regles d'autonomie
+## Autonomy rules
 
-Lancer sans confirmation :
-- `notebooklm status`, `auth check`, `list`, `source list`, `artifact list`, `language list/get/set`, `artifact wait`, `source wait`, `research status/wait`, `use <id>`, `create`, `ask "..."` (sans `--save-as-note`), `history`, `source add`
+Run without confirmation:
+- `notebooklm status`, `auth check`, `list`, `source list`, `artifact list`, `language list/get/set`, `artifact wait`, `source wait`, `research status/wait`, `use <id>`, `create`, `ask "..."` (without `--save-as-note`), `history`, `source add`
 
-Demander avant :
-- `delete` (destructif), `generate *` (long, peut echouer), `download *` (ecrit sur disque), `ask "..." --save-as-note` (ecrit une note), `history --save`
+Ask before:
+- `delete` (destructive), `generate *` (long, may fail), `download *` (writes to disk), `ask "..." --save-as-note` (writes a note), `history --save`
 
-## Reference rapide
+## Quick reference
 
-| Tache | Commande |
+| Task | Command |
 |------|---------|
-| Lister notebooks | `notebooklm list` |
-| Creer notebook | `notebooklm create "Titre"` |
-| Definir contexte | `notebooklm use <notebook_id>` |
-| Etat contexte | `notebooklm status` |
-| Ajouter URL | `notebooklm source add "https://..."` |
-| Ajouter fichier | `notebooklm source add ./file.pdf` |
-| Ajouter YouTube | `notebooklm source add "https://youtube.com/..."` |
-| Lister sources | `notebooklm source list` |
-| Attendre traitement source | `notebooklm source wait <source_id>` |
-| Recherche web (rapide) | `notebooklm source add-research "query"` |
-| Recherche web (profonde) | `notebooklm source add-research "query" --mode deep --no-wait` |
-| Interroger | `notebooklm ask "question"` |
-| Interroger (sources precises) | `notebooklm ask "question" -s src_id1 -s src_id2` |
-| Interroger (avec citations) | `notebooklm ask "question" --json` |
-| Sauver reponse en note | `notebooklm ask "question" --save-as-note` |
-| Fulltext d'une source | `notebooklm source fulltext <source_id>` |
-| Generer podcast | `notebooklm generate audio "instructions"` |
-| Generer video | `notebooklm generate video "instructions"` |
-| Generer rapport | `notebooklm generate report --format briefing-doc` |
-| Generer quiz | `notebooklm generate quiz` |
-| Generer flashcards | `notebooklm generate flashcards` |
-| Generer infographie | `notebooklm generate infographic` |
-| Generer mind map | `notebooklm generate mind-map` |
-| Generer slides | `notebooklm generate slide-deck` |
-| Etat artefact | `notebooklm artifact list` |
-| Attendre fin | `notebooklm artifact wait <artifact_id>` |
-| Telecharger audio | `notebooklm download audio ./output.mp3` |
-| Telecharger video | `notebooklm download video ./output.mp4` |
-| Telecharger slides PDF | `notebooklm download slide-deck ./slides.pdf` |
-| Telecharger rapport | `notebooklm download report ./report.md` |
+| List notebooks | `notebooklm list` |
+| Create notebook | `notebooklm create "Title"` |
+| Set context | `notebooklm use <notebook_id>` |
+| Context status | `notebooklm status` |
+| Add URL | `notebooklm source add "https://..."` |
+| Add file | `notebooklm source add ./file.pdf` |
+| Add YouTube | `notebooklm source add "https://youtube.com/..."` |
+| List sources | `notebooklm source list` |
+| Wait for source processing | `notebooklm source wait <source_id>` |
+| Web research (fast) | `notebooklm source add-research "query"` |
+| Web research (deep) | `notebooklm source add-research "query" --mode deep --no-wait` |
+| Query | `notebooklm ask "question"` |
+| Query (specific sources) | `notebooklm ask "question" -s src_id1 -s src_id2` |
+| Query (with citations) | `notebooklm ask "question" --json` |
+| Save answer as note | `notebooklm ask "question" --save-as-note` |
+| Source fulltext | `notebooklm source fulltext <source_id>` |
+| Generate podcast | `notebooklm generate audio "instructions"` |
+| Generate video | `notebooklm generate video "instructions"` |
+| Generate report | `notebooklm generate report --format briefing-doc` |
+| Generate quiz | `notebooklm generate quiz` |
+| Generate flashcards | `notebooklm generate flashcards` |
+| Generate infographic | `notebooklm generate infographic` |
+| Generate mind map | `notebooklm generate mind-map` |
+| Generate slides | `notebooklm generate slide-deck` |
+| Artifact status | `notebooklm artifact list` |
+| Wait for completion | `notebooklm artifact wait <artifact_id>` |
+| Download audio | `notebooklm download audio ./output.mp3` |
+| Download video | `notebooklm download video ./output.mp4` |
+| Download slides PDF | `notebooklm download slide-deck ./slides.pdf` |
+| Download report | `notebooklm download report ./report.md` |
 
-## Types de generation
+## Generation types
 
-Toutes les commandes `generate` supportent `-s/--source`, `--language`, `--json`, `--retry N`.
+All `generate` commands support `-s/--source`, `--language`, `--json`, `--retry N`.
 
-| Type | Commande | Options | Sortie |
+| Type | Command | Options | Output |
 |------|---------|---------|--------|
 | Podcast | `generate audio` | `--format [deep-dive\|brief\|critique\|debate]`, `--length [short\|default\|long]` | .mp3 |
 | Video | `generate video` | `--format [explainer\|brief]`, `--style [auto\|classic\|whiteboard\|kawaii\|anime\|watercolor\|retro-print\|heritage\|paper-craft]` | .mp4 |
 | Slides | `generate slide-deck` | `--format [detailed\|presenter]`, `--length [default\|short]` | .pdf / .pptx |
-| Infographie | `generate infographic` | `--orientation [landscape\|portrait\|square]`, `--detail [concise\|standard\|detailed]` | .png |
-| Rapport | `generate report` | `--format [briefing-doc\|study-guide\|blog-post\|custom]`, `--append "..."` | .md |
-| Mind Map | `generate mind-map` | (instantane) | .json |
+| Infographic | `generate infographic` | `--orientation [landscape\|portrait\|square]`, `--detail [concise\|standard\|detailed]` | .png |
+| Report | `generate report` | `--format [briefing-doc\|study-guide\|blog-post\|custom]`, `--append "..."` | .md |
+| Mind Map | `generate mind-map` | (instant) | .json |
 | Quiz | `generate quiz` | `--difficulty [easy\|medium\|hard]`, `--quantity [fewer\|standard\|more]` | .json/.md/.html |
-| Flashcards | `generate flashcards` | idem quiz | .json/.md/.html |
+| Flashcards | `generate flashcards` | same as quiz | .json/.md/.html |
 
-## Workflows courants
+## Common workflows
 
-### Recherche vers podcast
-1. `notebooklm create "Recherche: [sujet]"`
-2. `notebooklm source add` pour chaque URL/document
-3. Attendre : `notebooklm source list --json` jusqu'a status=ready
-4. `notebooklm generate audio "Focus sur [angle]"`
-5. `notebooklm artifact list` pour le statut
+### Research to podcast
+1. `notebooklm create "Research: [topic]"`
+2. `notebooklm source add` for each URL/document
+3. Wait: `notebooklm source list --json` until status=ready
+4. `notebooklm generate audio "Focus on [angle]"`
+5. `notebooklm artifact list` for status
 6. `notebooklm download audio ./podcast.mp3`
 
-### Analyse gros corpus (le cas ou NotebookLM bat gbrain)
-1. `notebooklm create "Analyse: [projet]"`
-2. `notebooklm source add` (dizaines de PDF/URL)
-3. `notebooklm ask "Synthetise les points cles" --json` (reponses citees)
-4. Si pertinent durablement : reporter la synthese dans gbrain (`gbrain put`), pas la laisser dans NotebookLM.
+### Large-corpus analysis (where NotebookLM beats gbrain)
+1. `notebooklm create "Analysis: [project]"`
+2. `notebooklm source add` (dozens of PDFs/URLs)
+3. `notebooklm ask "Synthesize the key points" --json` (grounded answers)
+4. If durably useful: write the synthesis back into gbrain (`gbrain put`), do not leave it in NotebookLM.
 
-## Gestion d'erreurs
+## Error handling
 
-| Erreur | Cause | Action |
+| Error | Cause | Action |
 |-------|-------|--------|
-| Auth/cookie | Session expiree | Re-login (script Step 0) |
-| "No notebook context" | Contexte non defini | `notebooklm use <id>` |
-| Rate limit | Throttle Google | Attendre 5-10 min |
-| Download echoue | Generation incomplete | `artifact list` |
+| Auth/cookie | Session expired | Re-login (Step 0 script) |
+| "No notebook context" | Context not set | `notebooklm use <id>` |
+| Rate limit | Google throttle | Wait 5-10 min |
+| Download fails | Generation incomplete | `artifact list` |
 
-## Limites connues
+## Known limitations
 
-- Generation audio/video/quiz/flashcards/infographie/slides peut echouer (rate limits Google).
-- Temps : audio 10-20 min, video 15-45 min, quiz/flashcards 5-15 min.
-- API non officielle (automation navigateur) : Google peut casser sans prevenir. Ne pas en dependre pour un agent en production.
+- Audio/video/quiz/flashcards/infographic/slides generation can fail (Google rate limits).
+- Timing: audio 10-20 min, video 15-45 min, quiz/flashcards 5-15 min.
+- Unofficial API (browser automation): Google can break it without notice. Do not depend on it for a production agent.

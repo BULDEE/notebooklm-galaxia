@@ -1,113 +1,113 @@
 ---
 name: wrapup
-description: Cloture de session - resume la session, sauve la connaissance durable dans le brain gbrain (memoire canonique), met a jour les memoires Claude, et optionnellement genere un media NotebookLM (podcast/briefing). Se declenche sur /wrapup ou "wrap up", "save this session", "fin de session", "resume de session".
+description: End-of-session wrap-up. Summarizes the session, saves durable knowledge into the gbrain brain (canonical memory), updates Claude memories, and optionally generates a NotebookLM media artifact (podcast/briefing). Triggers on /wrapup or "wrap up", "save this session", "end of session", "session summary".
 ---
 
-# Cloture de session (Galaxia)
+# Session wrap-up (Galaxia)
 
-A lancer en fin de session pour capturer ce qui s'est passe et le verser dans la memoire long-terme.
+Run at the end of a session to capture what happened and commit it to long-term memory.
 
-## Principe (lire avant)
+## Principle (read first)
 
-La memoire canonique de Galaxia, c'est **gbrain** (Postgres+pgvector, vault Obsidian comme system of record). PAS NotebookLM. Ce wrapup ecrit donc la connaissance durable dans gbrain. NotebookLM reste optionnel : on l'utilise seulement pour generer un media de la session (podcast, briefing) quand ca a du sens, jamais comme stockage memoire.
+Galaxia's canonical memory is **gbrain** (Postgres+pgvector, with the Obsidian vault as the system of record). NOT NotebookLM. This wrap-up writes durable knowledge into gbrain. NotebookLM stays optional: use it only to generate a media artifact of the session (podcast, briefing) when it makes sense, never as memory storage.
 
-## Step 0 : Verifier l'acces au brain
+## Step 0: Check brain access
 
-Le wrapup ecrit via la CLI `gbrain` (qui doit pointer sur le brain Galaxia). Verifier :
+The wrap-up writes via the `gbrain` CLI (which must point at the Galaxia brain). Check:
 
 ```bash
 gbrain stats 2>&1 | head -3
 ```
 
-Si `gbrain` n'est pas configure sur le bon backend, exporter la connexion (Postgres cloud) avant d'ecrire :
+If `gbrain` is not pointed at the right backend, export the connection (cloud Postgres) before writing:
 ```bash
-export DATABASE_URL='<connexion Postgres du brain>'   # ou la config gbrain locale
+export DATABASE_URL='<brain Postgres connection string>'   # or the local gbrain config
 ```
 
-Si gbrain est injoignable : ne PAS bloquer. Sauver les memoires Claude localement et prevenir l'utilisateur que la capture brain est skippee.
+If gbrain is unreachable: do NOT block. Save the Claude memories locally and tell the user the brain capture is skipped.
 
-## Step 1 : Revue de session
+## Step 1: Review the session
 
-Relire toute la conversation et identifier :
-- Decisions prises (quoi + pourquoi)
-- Travail accompli (construit, fixe, configure, livre)
-- Apprentissages cles (surprenant ou non-evident)
-- Fils ouverts (a reprendre)
-- Preferences utilisateur revelees (comment il aime bosser)
+Re-read the whole conversation and identify:
+- Decisions made (what + why)
+- Work completed (built, fixed, configured, shipped)
+- Key learnings (surprising or non-obvious)
+- Open threads (to pick up later)
+- User preferences revealed (how they like to work)
 
-Filtre qualite : ne capturer que ce qui a du sens et sera utile plus tard. Le bavardage et l'ephemere ne vont pas dans le brain.
+Quality filter: only capture what is meaningful and will be useful later. Small talk and ephemeral exchanges do not go into the brain.
 
-## Step 2 : Ecrire dans gbrain (memoire canonique)
+## Step 2: Write into gbrain (canonical memory)
 
-Pour chaque element durable, ecrire une **page atomique** dans gbrain :
+For each durable item, write an **atomic page** into gbrain:
 
 ```bash
-# Resume de session (un slug par jour, suffixe si plusieurs sessions)
+# Session summary (one slug per day, suffix if multiple sessions)
 cat > /tmp/session.md << 'MD'
 ---
-title: "Session [sujet] - YYYY-MM-DD"
+title: "Session [topic] - YYYY-MM-DD"
 type: note
 tags: [type/session, source/wrapup]
 ---
 
-# Session [sujet] - YYYY-MM-DD
+# Session [topic] - YYYY-MM-DD
 
-## Fait
+## Done
 - ...
 
 ## Decisions
-- ... (quoi + pourquoi)
+- ... (what + why)
 
-## Apprentissages
+## Learnings
 - ...
 
-## Fils ouverts
+## Open threads
 - ...
 MD
-gbrain put "sessions/YYYY-MM-DD-[sujet]" < /tmp/session.md
+gbrain put "sessions/YYYY-MM-DD-[topic]" < /tmp/session.md
 ```
 
-Pour une decision structurante ou une entite nouvelle (projet/personne/societe) qui merite sa propre page, ecrire une page dediee plutot que de la noyer dans le resume. Lier les pages avec `gbrain link <from> <to>` si pertinent.
+For a structural decision or a new entity (project/person/company) that deserves its own page, write a dedicated page rather than burying it in the summary. Link pages with `gbrain link <from> <to>` when relevant.
 
-Regles : page atomique, titre clair, ne pas dupliquer (verifier d'abord via `gbrain search "..."`), dates absolues.
+Rules: atomic page, clear title, do not duplicate (check first with `gbrain search "..."`), absolute dates.
 
-## Step 3 : Memoires Claude
+## Step 3: Claude memories
 
-Mettre a jour l'index memoire Claude (MEMORY.md + fichiers) comme d'habitude :
-- feedback (corrections/approches confirmees, avec Why + How to apply)
-- project (travail en cours, objectifs, contexte)
-- user (role, preferences, savoir)
-- reference (ressources/outils externes)
+Update the Claude memory index (MEMORY.md + files) as usual:
+- feedback (corrections/confirmed approaches, with Why + How to apply)
+- project (ongoing work, goals, context)
+- user (role, preferences, knowledge)
+- reference (external resources/tools)
 
-Ne pas dupliquer, ne pas sauver ce qui est derivable du code/git, dates absolues.
+Do not duplicate, do not save what is derivable from code/git, use absolute dates.
 
-## Step 4 : Media NotebookLM (optionnel)
+## Step 4: NotebookLM media (optional)
 
-Si la session est significative et que l'utilisateur veut un media (sinon skip) :
+If the session is significant and the user wants a media artifact (otherwise skip):
 
 ```bash
-# Pousser le resume comme source puis generer un briefing ou un podcast
-notebooklm create "Galaxia Sessions" --json   # une seule fois, reutiliser l'id ensuite
+# Push the summary as a source, then generate a briefing or podcast
+notebooklm create "Galaxia Sessions" --json   # once, reuse the id afterwards
 notebooklm source add /tmp/session.md --notebook <id>
-notebooklm generate audio "Resume cette session en deep-dive de 5 minutes"   # ou: generate report --format briefing-doc
+notebooklm generate audio "Summarize this session as a 5-minute deep-dive"   # or: generate report --format briefing-doc
 ```
 
-Ne PAS faire de NotebookLM le stockage memoire : la source de verite reste gbrain. Ici NotebookLM ne sert qu'a produire un media ecoutable/lisible.
+Do NOT make NotebookLM the memory store: the source of truth stays gbrain. Here NotebookLM only produces a listenable/readable media artifact.
 
-## Step 5 : Confirmer
+## Step 5: Confirm
 
-Dire a l'utilisateur, brievement :
-- Combien de pages ecrites dans gbrain + combien de memoires Claude maj
-- Si un media NotebookLM a ete genere (ou skippe)
-- Les fils ouverts a reprendre
+Tell the user, briefly:
+- How many pages written to gbrain + how many Claude memories updated
+- Whether a NotebookLM media artifact was generated (or skipped)
+- Open threads to pick up next time
 
-## Gestion d'erreurs
+## Error handling
 
-- gbrain injoignable : sauver les memoires Claude, skip la capture brain, prevenir.
-- Rien de significatif a sauver : le dire, ne pas forcer des memoires vides.
-- `notebooklm` absent : skip le media (optionnel), ne pas bloquer la cloture.
+- gbrain unreachable: save Claude memories, skip the brain capture, tell the user.
+- Nothing significant to save: say so, do not force empty memories.
+- `notebooklm` missing: skip the media (optional), do not block the wrap-up.
 
-## Pre-requis
+## Prerequisites
 
-- gbrain CLI configure sur le brain Galaxia (obligatoire pour la memoire).
-- NotebookLM CLI (optionnel, pour le media) : voir le skill `notebooklm`.
+- gbrain CLI pointed at the Galaxia brain (required for memory).
+- NotebookLM CLI (optional, for media): see the `notebooklm` skill.

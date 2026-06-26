@@ -1,35 +1,35 @@
 # notebooklm-galaxia
 
-Plugin Claude Code : acces programmatique complet a Google NotebookLM, positionne dans la stack Galaxia.
+Claude Code plugin: full programmatic access to Google NotebookLM, positioned inside the Galaxia stack.
 
-## Ce que ca fait
+## What it does
 
-NotebookLM n'expose pas d'API de query officielle. Ce plugin s'appuie sur la CLI communautaire `notebooklm-py` (automation navigateur, cookies) pour piloter NotebookLM depuis Claude Code :
+NotebookLM exposes no official query API. This plugin builds on the community CLI `notebooklm-py` (browser automation, cookies) to drive NotebookLM from Claude Code:
 
-- Creer des notebooks, ajouter des sources (URL, YouTube, PDF, audio, video, image)
-- Interroger un corpus avec reponses citees
-- Generer tous les artefacts : podcast audio, video, slides, quiz, flashcards, infographie, mind map, rapport
-- Telecharger les resultats (mp3, mp4, pdf, pptx, md, csv, json)
+- Create notebooks, add sources (URL, YouTube, PDF, audio, video, image)
+- Query a corpus with grounded citations
+- Generate every artifact: audio podcast, video, slides, quiz, flashcards, infographic, mind map, report
+- Download results (mp3, mp4, pdf, pptx, md, csv, json)
 
-## Positionnement (important)
+## Positioning (important)
 
-Dans la stack Galaxia, la **memoire de retrieval c'est gbrain** (Postgres+pgvector, vault Obsidian comme system of record). NotebookLM n'est PAS la memoire de l'agent. Ce plugin le cantonne a ses forces reelles :
+In the Galaxia stack, the **retrieval memory is gbrain** (Postgres+pgvector, with the Obsidian vault as the system of record). NotebookLM is NOT the agent's memory. This plugin keeps it to its real strengths:
 
-- Generateur de **media** : podcasts, videos, slides, infographies.
-- Analyse ponctuelle d'un **gros corpus externe** (dizaines de documents) avec citations.
+- **Media generator**: podcasts, videos, slides, infographics.
+- One-off analysis of a **large external corpus** (dozens of documents) with citations.
 
-Ce qu'on ne fait PAS : brancher NotebookLM en MCP sur l'agent autonome (Hermes), ni s'en servir comme stockage memoire. L'automation navigateur est trop fragile (rate limits, ToS, casse au moindre changement d'UI) pour un agent 24/7. Pour declencher une generation depuis le stack autonome, passer par N8N (workflow deterministe, hors hot path agent).
+What we do NOT do: wire NotebookLM as an MCP server for the autonomous agent (Hermes), or use it as memory storage. Browser automation is too fragile (rate limits, ToS, breaks on any UI change) for a 24/7 agent. To trigger a generation from the autonomous stack, go through N8N (deterministic workflow, out of the agent hot path).
 
 ## Skills
 
 | Skill | Role |
 |-------|------|
-| `notebooklm` | Acces CLI complet a NotebookLM (setup, auth, sources, query, generation, download). |
-| `wrapup` | Cloture de session gbrain-first : ecrit la connaissance durable dans gbrain (memoire canonique), met a jour les memoires Claude, et genere optionnellement un media NotebookLM. |
+| `notebooklm` | Full NotebookLM CLI access (setup, auth, sources, query, generation, download). |
+| `wrapup` | gbrain-first session wrap-up: writes durable knowledge into gbrain (canonical memory), updates Claude memories, and optionally generates a NotebookLM media artifact. |
 
 ## Installation
 
-Le plugin gere le setup au premier usage (`/notebooklm`). Manuellement :
+The plugin handles setup on first use (`/notebooklm`). Manually:
 
 ```bash
 python3 -m venv ~/.notebooklm-venv
@@ -39,19 +39,19 @@ playwright install chromium
 ln -sf ~/.notebooklm-venv/bin/notebooklm ~/bin/notebooklm
 ```
 
-Authentification : voir le skill `notebooklm` (login navigateur, capture de session).
+Authentication: see the `notebooklm` skill (browser login, session capture).
 
-## Pre-requis
+## Requirements
 
 - Python 3.10+
 - Chromium (via `playwright install chromium`)
-- Un compte Google avec NotebookLM
-- Pour `wrapup` : la CLI `gbrain` configuree sur le brain Galaxia
+- A Google account with NotebookLM
+- For `wrapup`: the `gbrain` CLI pointed at the Galaxia brain
 
 ## Credits
 
-Base sur la CLI communautaire `notebooklm-py` et les skills communautaires NotebookLM / WrapUp, adaptes et repositionnes pour la stack Galaxia (gbrain comme memoire canonique). API NotebookLM non officielle, susceptible de casser sans preavis.
+Based on the community CLI `notebooklm-py` and the community NotebookLM / WrapUp skills, adapted and repositioned for the Galaxia stack (gbrain as canonical memory). NotebookLM is an unofficial API and can break without notice.
 
-## Licence
+## License
 
-Proprietary. (c) Alexandre Mallet / BULDEE.
+Apache-2.0. (c) Alexandre Mallet / BULDEE.
